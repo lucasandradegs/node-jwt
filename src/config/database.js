@@ -7,6 +7,7 @@ const db = new sqlite3.Database(dbPath);
 
 function initializeDatabase() {
     db.serialize(() => {
+        // Tabela de usuários
         db.run(`
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,6 +18,44 @@ function initializeDatabase() {
             )
         `);
 
+        // Tabela de pedidos
+        db.run(`
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                total_amount DECIMAL(10,2) NOT NULL,
+                status TEXT CHECK(status IN ('pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled')) DEFAULT 'pending',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        `);
+
+        // Tabela de itens do pedido
+        db.run(`
+            CREATE TABLE IF NOT EXISTS order_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER NOT NULL,
+                product_name TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                unit_price DECIMAL(10,2) NOT NULL,
+                total_price DECIMAL(10,2) NOT NULL,
+                FOREIGN KEY (order_id) REFERENCES orders(id)
+            )
+        `);
+
+        // Tabela de produtos (cardápio)
+        db.run(`
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                price DECIMAL(10,2) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Criar usuário admin padrão
         const adminPassword = bcrypt.hashSync('admin123', 10);
         db.get('SELECT * FROM users WHERE username = ?', ['admin'], (err, user) => {
             if (!user) {
